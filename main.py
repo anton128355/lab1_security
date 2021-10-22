@@ -7,6 +7,7 @@ import os, stat, shutil
 
 class Window(QMainWindow, Ui_Lab1_security):
 
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowFlags(self.windowFlags() & ~QtCore.Qt.WindowCloseButtonHint)
@@ -26,56 +27,61 @@ class Window(QMainWindow, Ui_Lab1_security):
         self.button_rmfile.clicked.connect(self.rmfile)
 
 
-
-
-    def update_paths():
-        global lst_paths, lst_directories, lst_files, index
+    def update_paths(self):
+        global lst_paths, lst_directories, lst_files, index, directories, first_work_directory
         lst_paths = []
         lst_directories = []
         lst_files = []
         index = 0
-        for path, directory, file in os.walk(top="/home/anton/lab1_security/Dir0"):
+        for path, directory, file in os.walk(top=f"{first_work_path}/{first_work_directory}"):
             lst_paths.append(path)
             lst_directories.append(directory)
             lst_files.append(file)
+        print("Paths are updated!")
+
+
+    iter_start = 0
 
 
     def start_function(self):
-        directories = r"Dir0/Dir1/Dir2/Dir3/Dir4"
+        global directories, all_directory, first_work_directory, last_work_directory, first_work_path
+        first_work_directory = "Dir0/"
+        last_work_directory = r"Dir1/Dir2/Dir3/Dir4"
+
+        directories = first_work_directory + last_work_directory
+        if Window.iter_start == 0:
+            all_directory = os.getcwd()
+
+        first_work_path = all_directory.replace(last_work_directory, '')
+        print(first_work_path)
         try:
             os.makedirs(directories)
         except FileExistsError:
             pass
+
+        
         for i in range(5):
             file = open(f"Dir{i}/dir{i}.txt", "w+")
             os.chdir(f"Dir{i}")
             file.write(f"Directory{i}")
             file.close()
-        os.chmod("/home/anton/lab1_security/Dir0" ,stat.S_IRWXU)
-        Window.update_paths()
-
+        os.chmod(first_work_path ,stat.S_IRWXU)
+        Window.update_paths(self)
+        Window.iter_start += 1
 
 
     def end_function(self):
+        global first_work_directory
         try:
-            shutil.rmtree("/home/anton/lab1_security/Dir0")
+            shutil.rmtree(first_work_directory)
         except FileNotFoundError:
             sys.exit()
         sys.exit()
 
 
-    def clear_all(self):
-        self.line_edit_pwd.clear()
-        self.line_edit_ls.clear()
-        self.line_edit_cd.clear()
-        self.line_edit_mkdir.clear()
-        self.line_edit_rmfile.clear()
-        self.line_edit_rmdir.clear()
-        self.line_edit_vi.clear()
-        self.text_edit_vi.clear()
-
-
     def pwd(self):
+        global lst_paths, index
+
         if self.radiobutton_blocked_user.isChecked():
             self.line_edit_pwd.clear()
             self.line_edit_pwd.setText("Permission denied!")
@@ -85,6 +91,7 @@ class Window(QMainWindow, Ui_Lab1_security):
 
 
     def ls(self):
+        global lst_directories, lst_files, index
         if self.radiobutton_blocked_user.isChecked():
             self.line_edit_ls.clear()
             self.line_edit_ls.setText("Permission denied!")
@@ -94,7 +101,7 @@ class Window(QMainWindow, Ui_Lab1_security):
 
 
     def cd(self):
-        global index
+        global index, lst_paths
         if self.radiobutton_blocked_user.isChecked():
             self.line_edit_cd.clear()
             self.line_edit_cd.setText("Permission denied!")
@@ -109,13 +116,14 @@ class Window(QMainWindow, Ui_Lab1_security):
 
 
     def mkdir(self):
+        global lst_paths
         text_mkdir = self.line_edit_mkdir.text()
         if self.radiobutton_root.isChecked():
             if text_mkdir not in lst_paths:
                 os.mkdir(text_mkdir)
                 self.line_edit_mkdir.clear()
                 self.line_edit_mkdir.setText("Ok!")
-                Window.update_paths()
+                Window.update_paths(self)
 
             else:
                 self.line_edit_mkdir.clear()
@@ -127,13 +135,14 @@ class Window(QMainWindow, Ui_Lab1_security):
 
 
     def rmfile(self):
+        global lst_files, index
         text_rmfile = self.line_edit_rmfile.text()
         if self.radiobutton_root.isChecked():
             if text_rmfile.split("/")[-1] in lst_files[index]:
                 os.remove(text_rmfile)
                 self.line_edit_rmfile.clear()
                 self.line_edit_rmfile.setText("Ok!")
-                Window.update_paths()
+                Window.update_paths(self)
 
             else:
                 self.line_edit_rmfile.clear()
@@ -146,15 +155,15 @@ class Window(QMainWindow, Ui_Lab1_security):
             self.line_edit_rmfile.setText("Permission denied!")
 
 
-
     def rmdir(self):
+        global lst_paths
         text_rmdir = self.line_edit_rmdir.text()
         if self.radiobutton_root.isChecked():
             if text_rmdir in lst_paths:
                 shutil.rmtree(text_rmdir)
                 self.line_edit_rmdir.clear()
                 self.line_edit_rmdir.setText("Ok!")
-                Window.update_paths()
+                Window.update_paths(self)
 
             else:
                 self.line_edit_rmdir.clear()
@@ -166,6 +175,7 @@ class Window(QMainWindow, Ui_Lab1_security):
 
 
     def vi(self):
+        global lst_paths, lst_files, index
         name_file = self.line_edit_vi.text()
         content_file = self.text_edit_vi.toPlainText()
         if self.radiobutton_root.isChecked():
@@ -177,7 +187,7 @@ class Window(QMainWindow, Ui_Lab1_security):
                 self.line_edit_vi.setText("Ok!")
                 self.text_edit_vi.clear()
                 self.text_edit_vi.insertPlainText("Ok!")
-                Window.update_paths()
+                Window.update_paths(self)
             else:
                 self.line_edit_vi.clear()
                 self.line_edit_vi.setText("Error in path!")
@@ -185,17 +195,14 @@ class Window(QMainWindow, Ui_Lab1_security):
                 self.text_edit_vi.insertPlainText("Error in path!")
         
         else:
-            self.line_edit_rmdir.clear()
-            self.line_edit_rmdir.setText("Permission denied!")
-
+            self.line_edit_vi.clear()
+            self.line_edit_vi.setText("Permission denied!")
+            self.text_edit_vi.clear()
+            self.text_edit_vi.insertPlainText("Permission denied!")
 
 
 if __name__ == "__main__":
-
     app = QApplication(sys.argv)
-
     win = Window()
-
     win.show()
-
     sys.exit(app.exec())
